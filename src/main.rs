@@ -11,7 +11,7 @@ use db::{ArticleFilter, NnwDb};
 use opml::Subscriptions;
 
 #[derive(Parser)]
-#[command(name = "nnw", about = "Command-line interface for NetNewsWire")]
+#[command(name = "netnews", about = "Command-line interface for NetNewsWire")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
