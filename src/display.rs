@@ -110,6 +110,16 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
 
     println!("{}", "─".repeat(72));
 
+    if let Some(url) = article.best_url() {
+        eprint!("Fetching article...");
+        if let Some(text) = fetch_and_extract(url) {
+            eprintln!("\r                   \r");
+            println!("{}", text);
+            return;
+        }
+        eprintln!(" using feed content.");
+    }
+
     let body = article
         .content_text
         .as_deref()
@@ -133,6 +143,24 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
     match body {
         Some(text) if !text.trim().is_empty() => println!("{}", text.trim()),
         _ => println!("(no content)"),
+    }
+}
+
+fn fetch_and_extract(url: &str) -> Option<String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15")
+        .build()
+        .ok()?;
+    let html = client.get(url).send().ok()?.text().ok()?;
+    let mut cursor = std::io::Cursor::new(html.as_bytes());
+    let extracted = readability::extractor::extract(&mut cursor, &url.parse().ok()?).ok()?;
+    let text = html2text::from_read(extracted.content.as_bytes(), 80);
+    let trimmed = text.trim();
+    if trimmed.len() > 50 {
+        Some(trimmed.to_string())
+    } else {
+        None
     }
 }
 

@@ -19,4 +19,5 @@ reqwest = { version = "0.12", features = ["rustls-tls", "blocking"], default-fea
 roxmltree = "0.20"
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
+readability = "0.3"
 serde_json = "1"
