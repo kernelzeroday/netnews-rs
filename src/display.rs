@@ -38,8 +38,12 @@ pub fn print_articles(articles: &[ArticleRow], feed_names: &HashMap<String, Stri
         let num = format!("{:>width$}.", i + 1, width = num_width);
         let star = if a.starred { " *" } else { "" };
 
+        let url = a.best_url().unwrap_or("");
+        let indent = num_width + 2;
+
         if a.read {
             let _ = writeln!(out, "{} {}", num.dimmed(), title.dimmed());
+            let _ = writeln!(out, "{:indent$}{}", "", url.dimmed(), indent = indent);
             let _ = writeln!(
                 out,
                 "{:indent$}{} · {} · {}{}",
@@ -48,10 +52,17 @@ pub fn print_articles(articles: &[ArticleRow], feed_names: &HashMap<String, Stri
                 date_str.dimmed(),
                 id_short.dimmed(),
                 star.dimmed(),
-                indent = num_width + 2,
+                indent = indent,
             );
         } else {
             let _ = writeln!(out, "{} {}", num.bold(), title.bold());
+            let _ = writeln!(
+                out,
+                "{:indent$}{}",
+                "",
+                url.blue().underline(),
+                indent = indent,
+            );
             let _ = writeln!(
                 out,
                 "{:indent$}{} · {} · {}{}",
@@ -60,7 +71,7 @@ pub fn print_articles(articles: &[ArticleRow], feed_names: &HashMap<String, Stri
                 date_str,
                 id_short.dimmed(),
                 star.yellow(),
-                indent = num_width + 2,
+                indent = indent,
             );
         }
     }
@@ -77,7 +88,7 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
         date_str,
         &article.article_id[..8.min(article.article_id.len())].dimmed()
     );
-    if let Some(url) = &article.url {
+    if let Some(url) = article.best_url() {
         println!("{}", url.blue().underline());
     }
 
@@ -99,16 +110,29 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
 
     println!("{}", "─".repeat(72));
 
-    if let Some(text) = &article.content_text {
-        println!("{}", text.trim());
-    } else if let Some(html) = &article.content_html {
-        let text = html2text::from_read(html.as_bytes(), 80);
-        println!("{}", text.trim());
-    } else if let Some(summary) = &article.summary {
-        let text = html2text::from_read(summary.as_bytes(), 80);
-        println!("{}", text.trim());
-    } else {
-        println!("(no content)");
+    let body = article
+        .content_text
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string())
+        .or_else(|| {
+            article
+                .content_html
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .map(|html| html2text::from_read(html.as_bytes(), 80))
+        })
+        .or_else(|| {
+            article
+                .summary
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .map(|html| html2text::from_read(html.as_bytes(), 80))
+        });
+
+    match body {
+        Some(text) if !text.trim().is_empty() => println!("{}", text.trim()),
+        _ => println!("(no content)"),
     }
 }
 

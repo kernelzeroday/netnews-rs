@@ -8,6 +8,7 @@ pub struct ArticleRow {
     pub feed_id: String,
     pub title: Option<String>,
     pub url: Option<String>,
+    pub external_url: Option<String>,
     pub content_html: Option<String>,
     pub content_text: Option<String>,
     pub summary: Option<String>,
@@ -17,6 +18,15 @@ pub struct ArticleRow {
     pub read: bool,
     pub starred: bool,
     pub date_arrived: f64,
+}
+
+impl ArticleRow {
+    pub fn best_url(&self) -> Option<&str> {
+        self.url
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .or(self.external_url.as_deref().filter(|s| !s.is_empty()))
+    }
 }
 
 pub struct ArticleFilter {
@@ -68,7 +78,7 @@ impl NnwDb {
 
     pub fn articles(&self, filter: &ArticleFilter) -> Result<Vec<ArticleRow>> {
         let mut sql = String::from(
-            "SELECT a.articleID, a.feedID, a.title, a.url, a.contentHTML, a.contentText, \
+            "SELECT a.articleID, a.feedID, a.title, a.url, a.externalURL, a.contentHTML, a.contentText, \
              a.summary, a.imageURL, a.datePublished, a.authors, \
              s.read, s.starred, s.dateArrived \
              FROM articles a \
@@ -105,7 +115,7 @@ impl NnwDb {
     }
 
     pub fn article_by_prefix(&self, prefix: &str) -> Result<ArticleRow> {
-        let sql = "SELECT a.articleID, a.feedID, a.title, a.url, a.contentHTML, a.contentText, \
+        let sql = "SELECT a.articleID, a.feedID, a.title, a.url, a.externalURL, a.contentHTML, a.contentText, \
                    a.summary, a.imageURL, a.datePublished, a.authors, \
                    s.read, s.starred, s.dateArrived \
                    FROM articles a \
@@ -129,7 +139,7 @@ impl NnwDb {
     }
 
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<ArticleRow>> {
-        let sql = "SELECT a.articleID, a.feedID, a.title, a.url, a.contentHTML, a.contentText, \
+        let sql = "SELECT a.articleID, a.feedID, a.title, a.url, a.externalURL, a.contentHTML, a.contentText, \
                    a.summary, a.imageURL, a.datePublished, a.authors, \
                    s.read, s.starred, s.dateArrived \
                    FROM articles a \
@@ -232,14 +242,15 @@ fn row_to_article(row: &rusqlite::Row) -> rusqlite::Result<ArticleRow> {
         feed_id: row.get(1)?,
         title: row.get(2)?,
         url: row.get(3)?,
-        content_html: row.get(4)?,
-        content_text: row.get(5)?,
-        summary: row.get(6)?,
-        image_url: row.get(7)?,
-        date_published: row.get(8)?,
-        authors_json: row.get(9)?,
-        read: row.get(10)?,
-        starred: row.get(11)?,
-        date_arrived: row.get(12)?,
+        external_url: row.get(4)?,
+        content_html: row.get(5)?,
+        content_text: row.get(6)?,
+        summary: row.get(7)?,
+        image_url: row.get(8)?,
+        date_published: row.get(9)?,
+        authors_json: row.get(10)?,
+        read: row.get(11)?,
+        starred: row.get(12)?,
+        date_arrived: row.get(13)?,
     })
 }
