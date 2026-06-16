@@ -14,7 +14,7 @@ use opml::Subscriptions;
 #[command(name = "nnw", about = "Command-line interface for NetNewsWire")]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 
     /// Account name
     #[arg(long, default_value = "OnMyMac", global = true)]
@@ -121,20 +121,21 @@ fn main() -> Result<()> {
     let account = &cli.account;
 
     match cli.command {
-        Command::Feeds => cmd_feeds(account),
-        Command::Articles {
+        None => cmd_articles(account, None, None, false, false, 50),
+        Some(Command::Feeds) => cmd_feeds(account),
+        Some(Command::Articles {
             feed,
             folder,
             unread,
             starred,
             limit,
-        } => cmd_articles(account, feed, folder, unread, starred, limit),
-        Command::Read { id } => cmd_read(account, &id),
-        Command::Search { query, limit } => cmd_search(account, &query, limit),
-        Command::Mark { action } => cmd_mark(account, action),
-        Command::Add { url, folder, name } => cmd_add(account, &url, folder.as_deref(), name),
-        Command::Remove { feed } => cmd_remove(account, &feed),
-        Command::Refresh { feed } => cmd_refresh(account, feed.as_deref()),
+        }) => cmd_articles(account, feed, folder, unread, starred, limit),
+        Some(Command::Read { id }) => cmd_read(account, &id),
+        Some(Command::Search { query, limit }) => cmd_search(account, &query, limit),
+        Some(Command::Mark { action }) => cmd_mark(account, action),
+        Some(Command::Add { url, folder, name }) => cmd_add(account, &url, folder.as_deref(), name),
+        Some(Command::Remove { feed }) => cmd_remove(account, &feed),
+        Some(Command::Refresh { feed }) => cmd_refresh(account, feed.as_deref()),
     }
 }
 

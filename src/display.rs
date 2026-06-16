@@ -25,38 +25,42 @@ pub fn print_articles(articles: &[ArticleRow], feed_names: &HashMap<String, Stri
 
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
+    let num_width = articles.len().to_string().len();
 
-    for a in articles {
+    for (i, a) in articles.iter().enumerate() {
         let id_short = &a.article_id[..8.min(a.article_id.len())];
         let feed_name = feed_names
             .get(&a.feed_id)
             .map(|s| s.as_str())
             .unwrap_or("?");
         let title = a.title.as_deref().unwrap_or("(no title)");
-        let title_display = truncate(title, 60);
         let date_str = format_timestamp(a.date_published.unwrap_or(a.date_arrived));
-
-        let star = if a.starred { "*" } else { " " };
+        let num = format!("{:>width$}.", i + 1, width = num_width);
+        let star = if a.starred { " *" } else { "" };
 
         if a.read {
+            let _ = writeln!(out, "{} {}", num.dimmed(), title.dimmed());
             let _ = writeln!(
                 out,
-                "{} {} {:15} {:60} {}",
-                star,
-                id_short.dimmed(),
-                truncate(feed_name, 15).dimmed(),
-                title_display.dimmed(),
+                "{:indent$}{} · {} · {}{}",
+                "",
+                feed_name.dimmed(),
                 date_str.dimmed(),
+                id_short.dimmed(),
+                star.dimmed(),
+                indent = num_width + 2,
             );
         } else {
+            let _ = writeln!(out, "{} {}", num.bold(), title.bold());
             let _ = writeln!(
                 out,
-                "{} {} {:15} {:60} {}",
-                star.yellow(),
-                id_short.cyan(),
-                truncate(feed_name, 15).green(),
-                title_display.bold(),
+                "{:indent$}{} · {} · {}{}",
+                "",
+                feed_name.green(),
                 date_str,
+                id_short.dimmed(),
+                star.yellow(),
+                indent = num_width + 2,
             );
         }
     }
