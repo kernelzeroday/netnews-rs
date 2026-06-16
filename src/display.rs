@@ -112,7 +112,8 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
 
     if let Some(url) = article.best_url() {
         eprint!("Fetching article...");
-        if let Some(text) = fetch_and_extract(url) {
+        let title = article.title.as_deref().unwrap_or("");
+        if let Some(text) = fetch_and_extract(url, title) {
             eprintln!("\r                   \r");
             println!("{}", text);
             return;
@@ -146,7 +147,7 @@ pub fn print_article_detail(article: &ArticleRow, feed_name: &str) {
     }
 }
 
-fn fetch_and_extract(url: &str) -> Option<String> {
+fn fetch_and_extract(url: &str, title: &str) -> Option<String> {
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
         .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15")
@@ -157,7 +158,20 @@ fn fetch_and_extract(url: &str) -> Option<String> {
     let extracted = readability::extractor::extract(&mut cursor, &url.parse().ok()?).ok()?;
     let text = html2text::from_read(extracted.content.as_bytes(), 80);
     let trimmed = text.trim();
-    if trimmed.len() > 50 {
+    if trimmed.len() < 200 {
+        return None;
+    }
+    // Check extracted content relates to the article by matching title words
+    let title_words: Vec<&str> = title
+        .split_whitespace()
+        .filter(|w| w.len() >= 4)
+        .collect();
+    let text_lower = trimmed.to_lowercase();
+    let has_title_match = title_words.is_empty()
+        || title_words
+            .iter()
+            .any(|w| text_lower.contains(&w.to_lowercase()));
+    if has_title_match {
         Some(trimmed.to_string())
     } else {
         None
