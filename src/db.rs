@@ -153,6 +153,12 @@ impl NnwDb {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    pub fn last_arrived(&self) -> Result<f64> {
+        self.conn
+            .query_row("SELECT MAX(dateArrived) FROM statuses", [], |row| row.get(0))
+            .map_err(Into::into)
+    }
+
     pub fn set_read(&self, article_id: &str, read: bool) -> Result<()> {
         let changed = self.conn.execute(
             "UPDATE statuses SET read = ?1 WHERE articleID = ?2",

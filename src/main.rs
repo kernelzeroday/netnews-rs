@@ -121,7 +121,10 @@ fn main() -> Result<()> {
     let account = &cli.account;
 
     match cli.command {
-        None => cmd_articles(account, None, None, false, false, 50),
+        None => {
+            maybe_refresh(account);
+            cmd_articles(account, None, None, false, false, 50)
+        }
         Some(Command::Feeds) => cmd_feeds(account),
         Some(Command::Articles {
             feed,
@@ -301,6 +304,31 @@ fn cmd_remove(account: &str, feed: &str) -> Result<()> {
         anyhow::bail!("Feed '{}' not found", feed);
     }
     Ok(())
+}
+
+const STALE_SECS: f64 = 300.0;
+
+fn maybe_refresh(account: &str) {
+    let Ok(db_path) = config::db_path(account) else {
+        return;
+    };
+    let Ok(db) = NnwDb::open_readonly(&db_path) else {
+        return;
+    };
+    let Ok(last) = db.last_arrived() else {
+        return;
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+    if now - last < STALE_SECS {
+        return;
+    }
+    drop(db);
+    eprintln!("Refreshing feeds...");
+    let _ = cmd_refresh(account, None);
+    eprintln!();
 }
 
 fn cmd_refresh(account: &str, feed_name: Option<&str>) -> Result<()> {
